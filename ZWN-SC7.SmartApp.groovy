@@ -3,7 +3,7 @@
  *
  *	Author: Matt Frank based on VRCS Button Controller by Brian Dahlem, based on SmartThings Button Controller
  *	Date Created: 2014-12-18
- *  Last Updated: 2015-03-05
+ *  Last Updated: 2015-05-07
  *
  */
 definition(
@@ -150,10 +150,24 @@ def buttonEvent(evt){
     log.debug "buttonEvent: $evt.name - ($evt.data)"
     log.debug "button: $buttonNumber"
 
-    def recentEvents = buttonDevice.eventsSince(new Date(now() - 3000)).findAll{it.value == evt.value && it.data == evt.data}
-    log.debug "Found ${recentEvents.size()?:0} events in past 3 seconds"
+    def now_time = now()
 
-    if(recentEvents.size <= 1){
+    if (atomicState.lastEvent == null) {
+        atomicState.lastEvent = 0
+    }
+    def lastEvent = atomicState.lastEvent
+    atomicState.lastEvent = now_time
+    def delta = now_time - lastEvent
+
+    if (atomicState.lastButton == null) {
+        atomicState.lastButton = -1
+    }
+    def lastButton = atomicState.lastButton
+    atomicState.lastButton = buttonNumber
+
+    log.debug "Last event at ${lastEvent} delta ${delta}, last button ${lastButton}"
+
+    if(delta > 1000 || lastButton != buttonNumber){
       switch(buttonNumber) {
         case ~/.*1.*/:
           executeHandlers(1)
@@ -178,7 +192,7 @@ def buttonEvent(evt){
           break
       }
     } else {
-      log.debug "Found recent button press events for $buttonNumber with value $value"
+      log.debug "Found recent button press events for $buttonNumber with value $evt.value"
     }
   }
     else {
